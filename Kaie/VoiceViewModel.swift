@@ -30,33 +30,22 @@ enum VoiceState: String {
 @MainActor
 final class VoiceViewModel: ObservableObject {
     @Published var state: VoiceState = .idle
-    @Published var isHolding = false
+    @Published var isSessionActive = false
+    @Published var isUserSpeaking = false
     @Published var transcript = ""
     @Published var response = ""
-    @Published var statusText = "Tap and hold to speak"
+    @Published var statusText = "Tap start to speak"
 
     private var responseTask: Task<Void, Never>?
+    private var speakingTask: Task<Void, Never>?
     private let voiceService = MockVoiceService()
 
-    func pressBegan() {
-        guard !isHolding else { return }
-        isHolding = true
-        responseTask?.cancel()
-        transcript = ""
-        response = ""
-        statusText = "Listening..."
-        state = .listening
-        playHaptic()
-        voiceService.startCapture()
-    }
-
-    func pressEnded() {
-        guard isHolding else { return }
-        isHolding = false
-        state = .thinking
-        statusText = "Thinking..."
-        voiceService.stopCapture()
-        simulatePipeline()
+    func toggleSession() {
+        if isSessionActive {
+            stopSession()
+        } else {
+            startSession()
+        }
     }
 
     private func simulatePipeline() {
@@ -65,18 +54,50 @@ final class VoiceViewModel: ObservableObject {
             guard let self else { return }
             try? await Task.sleep(nanoseconds: 900_000_000)
             guard !Task.isCancelled else { return }
-            transcript = "I have been feeling overwhelmed lately."
-
-            try? await Task.sleep(nanoseconds: 800_000_000)
-            guard !Task.isCancelled else { return }
             state = .speaking
             statusText = "Speaking..."
-            response = "Thanks for sharing that. Want to talk about what feels heaviest today?"
 
             try? await Task.sleep(nanoseconds: 1_800_000_000)
             guard !Task.isCancelled else { return }
             state = .idle
-            statusText = "Tap and hold to speak"
+            statusText = "Tap start to speak"
+        }
+    }
+
+    private func startSession() {
+        guard !isSessionActive else { return }
+        isSessionActive = true
+        responseTask?.cancel()
+        transcript = ""
+        response = ""
+        statusText = "Listening..."
+        state = .listening
+        playHaptic()
+        voiceService.startCapture()
+        simulateSpeakingActivity()
+    }
+
+    private func stopSession() {
+        guard isSessionActive else { return }
+        isSessionActive = false
+        isUserSpeaking = false
+        state = .thinking
+        statusText = "Thinking..."
+        voiceService.stopCapture()
+        speakingTask?.cancel()
+        simulatePipeline()
+    }
+
+    private func simulateSpeakingActivity() {
+        speakingTask?.cancel()
+        speakingTask = Task { [weak self] in
+            guard let self else { return }
+            while isSessionActive {
+                isUserSpeaking = true
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                isUserSpeaking = false
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
         }
     }
 

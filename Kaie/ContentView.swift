@@ -144,29 +144,29 @@ struct ContentView: View {
         VStack(spacing: 10) {
             HStack(spacing: 12) {
                 Circle()
-                    .fill(ringColor.opacity(0.4))
+                    .fill(actionColor.opacity(0.6))
                     .frame(width: 10, height: 10)
-                Text(viewModel.isHolding ? "Release" : "Hold")
-                    .font(.custom("Avenir Next Demi Bold", size: 14))
-                    .foregroundStyle(.primary)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 22)
-                    .background(
-                        Capsule()
-                            .fill(Color.white.opacity(0.9))
-                            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 6)
-                    )
+                Button(action: {
+                    viewModel.toggleSession()
+                }) {
+                    Text(viewModel.isSessionActive ? "Stop" : "Start")
+                        .font(.custom("Avenir Next Demi Bold", size: 14))
+                        .foregroundStyle(.primary)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 26)
+                        .background(
+                            Capsule()
+                                .fill(actionColor.opacity(0.25))
+                                .overlay(
+                                    Capsule()
+                                        .stroke(actionColor.opacity(0.5), lineWidth: 1)
+                                )
+                                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 6)
+                        )
+                }
+                .buttonStyle(.plain)
             }
         }
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    viewModel.pressBegan()
-                }
-                .onEnded { _ in
-                    viewModel.pressEnded()
-                }
-        )
     }
 
     private var ringColor: Color {
@@ -183,11 +183,15 @@ struct ContentView: View {
     }
 
     private var ringPulseSize: CGFloat {
-        viewModel.state == .listening ? 260 : 235
+        viewModel.isUserSpeaking ? 270 : (viewModel.state == .listening ? 252 : 235)
     }
 
     private var ringPulseOpacity: Double {
-        viewModel.state == .listening ? 0.18 : 0.35
+        viewModel.isUserSpeaking ? 0.22 : (viewModel.state == .listening ? 0.16 : 0.35)
+    }
+
+    private var actionColor: Color {
+        viewModel.isSessionActive ? Color(.systemGray) : Color(.systemGray3)
     }
 }
 
